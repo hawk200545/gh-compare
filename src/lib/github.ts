@@ -205,7 +205,7 @@ function formatStat(value: number) {
   return compactNumber.format(Math.abs(value));
 }
 
-function pickRandom<T>(items: T[]): T {
+function pickRandom<T>(items: readonly T[]): T {
   return items[Math.floor(Math.random() * items.length)];
 }
 

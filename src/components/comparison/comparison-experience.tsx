@@ -138,7 +138,7 @@ function alignWeeklyActivity(
 ) {
   const map = new Map<
     string,
-    { [key: string]: number; weekLabel: string }
+    { weekLabel: string; values: Record<string, number> }
   >();
 
   const push = (login: string, data?: GitHubUserInsights["contributions"]) => {
@@ -146,8 +146,9 @@ function alignWeeklyActivity(
     for (const week of data.weeklySeries.slice(-20)) {
       const existing = map.get(week.weekStart) ?? {
         weekLabel: weekFormatter.format(new Date(week.weekStart)),
+        values: {},
       };
-      existing[login] = week.total;
+      existing.values[login] = week.total;
       map.set(week.weekStart, existing);
     }
   };
@@ -157,7 +158,10 @@ function alignWeeklyActivity(
 
   return Array.from(map.entries())
     .sort(([a], [b]) => new Date(a).getTime() - new Date(b).getTime())
-    .map(([, value]) => value);
+    .map(([, value]) => ({
+      weekLabel: value.weekLabel,
+      ...value.values,
+    }));
 }
 
 function buildLanguageComparison(

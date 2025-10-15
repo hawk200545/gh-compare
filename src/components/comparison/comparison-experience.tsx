@@ -40,6 +40,7 @@ import type {
 import { comparisonInputSchema } from "@/lib/schemas";
 import type { MemeResult } from "@/lib/meme";
 
+import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -86,8 +87,6 @@ type FormValues = z.infer<typeof formSchema>;
 
 const demoPairs: Array<{ label: string; userA: string; userB: string }> = [
   { label: "Open Source Titans", userA: "torvalds", userB: "gaearon" },
-  { label: "Framework Wizards", userA: "sindresorhus", userB: "vercel" },
-  { label: "AI Trendsetters", userA: "karpathy", userB: "openai" },
 ];
 
 const numberFormatter = new Intl.NumberFormat("en-US", {
@@ -271,13 +270,16 @@ export function ComparisonExperience() {
     <TooltipProvider>
       <div className="space-y-10">
         <header className="rounded-3xl border border-border bg-card px-6 pb-10 pt-12 shadow-sm">
-          <Badge
-            variant="outline"
-            className="mb-4 inline-flex items-center gap-2 text-xs uppercase tracking-wide"
-          >
-            <Sparkles className="h-3.5 w-3.5" />
-            GitHub Comparison Playground
-          </Badge>
+          <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <Badge
+              variant="outline"
+              className="inline-flex items-center gap-2 text-xs uppercase tracking-wide"
+            >
+              <Sparkles className="h-3.5 w-3.5" />
+              GitHub Comparison Playground
+            </Badge>
+            <ThemeToggle />
+          </div>
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div className="space-y-4">
               <h1 className="text-3xl font-semibold tracking-tight md:text-4xl">
@@ -560,8 +562,8 @@ function ComparisonResultPanel({
         </CardContent>
       </Card>
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        <Card className="lg:col-span-2 border border-border/70">
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+        <Card className="border border-border/70">
           <CardHeader>
             <CardTitle className="text-lg">Key metrics</CardTitle>
             <CardDescription>
@@ -636,22 +638,22 @@ function ComparisonResultPanel({
           </CardContent>
         </Card>
 
-        <Card className="border border-border/70">
+        <Card className="flex flex-col border border-border/70">
           <CardHeader>
             <CardTitle className="text-lg">Meme verdict</CardTitle>
             <CardDescription>
               Automatically generated based on the strongest stat gap.
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="flex-1 space-y-5">
             {meme?.url ? (
-              <div className="overflow-hidden rounded-xl border border-border/60">
+              <div className="relative aspect-[4/3] w-full overflow-hidden rounded-2xl border border-border/60 bg-muted/40 shadow-lg">
                 <Image
                   src={meme.url}
                   alt="Generated meme"
-                  width={400}
-                  height={400}
-                  className="h-auto w-full"
+                  fill
+                  sizes="(min-width: 1280px) 420px, (min-width: 1024px) 360px, 100vw"
+                  className="object-cover"
                 />
               </div>
             ) : (
@@ -677,7 +679,8 @@ function ComparisonResultPanel({
             )}
           </CardContent>
           <CardFooter className="text-xs text-muted-foreground">
-            Template tuned by Imgflip — change credentials or template logic in <code className="rounded bg-muted px-1 py-0.5">src/lib/meme.ts</code>.
+            Template tuned by Imgflip — change credentials or template logic in{" "}
+            <code className="rounded bg-muted px-1 py-0.5">src/lib/meme.ts</code>.
           </CardFooter>
         </Card>
       </div>

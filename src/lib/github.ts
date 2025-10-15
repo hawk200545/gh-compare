@@ -186,14 +186,28 @@ const GRAPHQL_USER_ANALYTICS_QUERY = /* GraphQL */ `
   }
 `;
 
-const MEME_TEMPLATES: Record<string, string> = {
-  dominant: "61579", // One Does Not Simply
-  close: "129242436", // Change My Mind
-  upset: "181913649", // Drake Hotline Bling
-  tie: "438680", // Batman Slapping Robin
+const MEME_TEMPLATES = {
+  dominant: ["61579", "188390779", "252600902"], // One Does Not Simply, UNO Draw 25, Gru's Plan
+  close: ["129242436", "222403160", "112126428"], // Change My Mind, Distracted Boyfriend, Finding Neverland
+  upset: ["181913649", "247375501", "129365222"], // Drake Hotline Bling, Woman Yelling at Cat, This Is Fine
+  tie: ["438680", "217743513", "4087833"], // Batman Slapping Robin, UNO, Waiting Skeleton
 };
 
 const SAFE_METRIC_DIFF_THRESHOLD = 0.01;
+
+const compactNumber = new Intl.NumberFormat("en-US", {
+  notation: "compact",
+  maximumFractionDigits: 1,
+});
+
+function formatStat(value: number) {
+  if (!Number.isFinite(value)) return "0";
+  return compactNumber.format(Math.abs(value));
+}
+
+function pickRandom<T>(items: T[]): T {
+  return items[Math.floor(Math.random() * items.length)];
+}
 
 function sanitizeLogin(input: string) {
   const trimmed = input.trim();
@@ -574,31 +588,123 @@ function buildSummary(result: ComparisonResult) {
 }
 
 function deriveMemePrompt(result: ComparisonResult): MemePrompt | null {
-  const { heroMetric } = result;
+  const { heroMetric, metrics, userA, userB } = result;
+
+  const topLanguageWinner = (user: GitHubUserInsights) =>
+    user.languages[0]?.name ?? "mystery stack";
+
   if (!heroMetric) {
+    const templateId = pickRandom(MEME_TEMPLATES.tie);
+    const duo = `${userA.login} & ${userB.login}`;
+    const languages = [
+      topLanguageWinner(userA),
+      topLanguageWinner(userB),
+    ].join(" vs ");
+
+    const topTextOptions = [
+      `${duo} in the ultimate merge conflict`,
+      `${duo} trying to out-commit each other`,
+      `${duo} same vibes, different clones`,
+    ];
+    const bottomTextOptions = [
+      `Result: perfect tie. Maybe pair on ${languages}?`,
+      `No winner. Just two legends pushing main together.`,
+      `It's a dead heat. Time for a duo livestream in ${languages}.`,
+    ];
+
     return {
-      templateId: MEME_TEMPLATES.tie,
-      topText: `${result.userA.login} vs ${result.userB.login}`,
-      bottomText: "It's too close to call. Maybe open a PR together?",
+      templateId,
+      topText: pickRandom(topTextOptions),
+      bottomText: pickRandom(bottomTextOptions),
     };
   }
 
-  const winner =
-    heroMetric.diff >= 0 ? result.userA : result.userB;
-  const loser = heroMetric.diff >= 0 ? result.userB : result.userA;
+  const winner = heroMetric.diff >= 0 ? userA : userB;
+  const loser = heroMetric.diff >= 0 ? userB : userA;
+  const winnerValue =
+    heroMetric.diff >= 0 ? heroMetric.userA : heroMetric.userB;
+  const loserValue =
+    heroMetric.diff >= 0 ? heroMetric.userB : heroMetric.userA;
   const gap = Math.abs(heroMetric.diff);
-  const winnerValue = heroMetric.diff >= 0 ? heroMetric.userA : heroMetric.userB;
-  const loserValue = heroMetric.diff >= 0 ? heroMetric.userB : heroMetric.userA;
 
-  const templateId =
-    gap > 100 ? MEME_TEMPLATES.dominant : gap < 10 ? MEME_TEMPLATES.close : MEME_TEMPLATES.upset;
+  const scenario =
+    gap > 100
+      ? "dominant"
+      : gap < 10
+        ? "close"
+        : "upset";
 
-  const metricName = heroMetric.label;
+  const templateId = pickRandom(MEME_TEMPLATES[scenario as keyof typeof MEME_TEMPLATES]);
+
+  const secondaryMetric = metrics
+    .filter((metric) => metric.id !== heroMetric.id)
+    .sort((a, b) => Math.abs(b.diff) - Math.abs(a.diff))[0];
+
+  const secondaryLeader = secondaryMetric
+    ? secondaryMetric.diff >= 0
+      ? userA
+      : userB
+    : null;
+
+  const secondaryLine = secondaryMetric
+    ? `${secondaryLeader?.login} owns ${secondaryMetric.label.toLowerCase()} (${formatStat(Math.max(secondaryMetric.userA, secondaryMetric.userB))} vs ${formatStat(Math.min(secondaryMetric.userA, secondaryMetric.userB))}).`
+    : `${winner.login} is on a roll.`;
+
+  const winnerLanguage = topLanguageWinner(winner);
+  const loserLanguage = topLanguageWinner(loser);
+  const metricName = heroMetric.label.toLowerCase();
+  const formattedWinnerValue = formatStat(winnerValue);
+  const formattedLoserValue = formatStat(loserValue);
+
+  const quips = {
+    dominant: {
+      top: [
+        `${winner.login} farming ${metricName} like it's Hacktoberfest`,
+        `Meanwhile ${winner.login} speedruns ${metricName}`,
+        `${winner.login} hitting ${formattedWinnerValue} ${metricName} before standup`,
+      ],
+      bottom: [
+        `${loser.login} stuck at ${formattedLoserValue} and refactoring ${loserLanguage} code.`,
+        `${loser.login} googling "how to catch up ${formattedWinnerValue}-${formattedLoserValue}"`,
+        `${loser.login} whispering to ${loserLanguage}: "We need more ${metricName}..."`,
+      ],
+    },
+    close: {
+      top: [
+        `${winner.login} barely edges ${loser.login} on ${metricName}`,
+        `${winner.login} vs ${loser.login}: photo-finish on ${metricName}`,
+        `${winner.login} sneaks ahead with ${formattedWinnerValue} ${metricName}`,
+      ],
+      bottom: [
+        `${loser.login} sitting at ${formattedLoserValue} — rematch after lunch?`,
+        `Scoreboard: ${winner.login} ${formattedWinnerValue} vs ${loser.login} ${formattedLoserValue}.`,
+        `${loser.login} sharpening ${loserLanguage} skills for the next push.`,
+      ],
+    },
+    upset: {
+      top: [
+        `${winner.login} drops an upset in ${metricName}`,
+        `Plot twist: ${winner.login} takes ${metricName}`,
+        `${winner.login} whispers "hold my keyboard"`,
+      ],
+      bottom: [
+        `${loser.login} stunned at ${formattedLoserValue}. ${secondaryLine}`,
+        `${loser.login} was not ready for the ${winnerLanguage} flex.`,
+        `${loser.login} writing a retro on how this happened.`,
+      ],
+    },
+  } as const;
+
+  const choices =
+    quips[scenario as keyof typeof quips] ?? quips.dominant;
+
+  const topText = pickRandom(choices.top);
+  const bottomText = pickRandom(choices.bottom);
 
   return {
     templateId,
-    topText: `${winner.login} flexing ${metricName.toLowerCase()}`,
-    bottomText: `${loser.login} stuck on ${loserValue} while ${winner.login} hits ${winnerValue}.`,
+    topText,
+    bottomText,
   };
 }
 

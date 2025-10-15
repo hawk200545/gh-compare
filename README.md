@@ -1,36 +1,52 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+## GitHub Showdown
 
-## Getting Started
+GitHub Showdown pits two GitHub profiles against each other with data-rich visuals and a meme-worthy punchline. The app fuses the GitHub REST and GraphQL APIs with React Query, Zod, Recharts, and Shadcn UI to deliver side-by-side analytics, contribution trends, language breakdowns, and an optional Imgflip meme.
 
-First, run the development server:
+### Features
+
+- 🔍 Accepts GitHub usernames or profile URLs with Zod validation
+- 📊 Aggregates followers, repository stars, pull requests, and weekly contribution tempo
+- 🎨 Responsive Shadcn UI with Recharts-powered visualisations and loading skeletons
+- 🧠 Caching layer to stay friendly with GitHub rate limits
+- 😂 Meme verdict via Imgflip (optional credentials)
+
+### Getting Started
+
+Install dependencies and spin up the development server:
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Then open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Environment Variables
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Copy `.env.example` to `.env.local` and fill in the following:
 
-## Learn More
+```
+GITHUB_ACCESS_TOKEN=           # optional but recommended for higher rate limits + GraphQL data
+IMGFLIP_USERNAME=              # optional; needed for meme generation
+IMGFLIP_PASSWORD=              # optional; needed for meme generation
+```
 
-To learn more about Next.js, take a look at the following resources:
+Without a GitHub token you’ll still get basic REST data, but contribution and language analytics will be limited.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Available Scripts
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- `npm run dev` – start Next.js in development mode
+- `npm run build` – create a production build
+- `npm start` – run the production build locally
+- `npm run lint` – lint the codebase with ESLint
 
-## Deploy on Vercel
+### Project Structure
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- `src/app/api/compare/route.ts` – API endpoint that fetches GitHub data, aggregates metrics, and triggers meme generation
+- `src/lib/github.ts` – orchestrates REST + GraphQL calls, caching, and comparison logic
+- `src/components/comparison/` – client-side experience, including the comparison form, charts, and result views
+- `src/lib/meme.ts` – wraps the Imgflip API
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### Deployment
+
+Deploy to Vercel (recommended) or any platform that supports Next.js 14. Remember to configure the environment variables in your host.

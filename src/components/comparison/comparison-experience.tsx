@@ -36,6 +36,7 @@ import type {
   ComparisonMetric,
   ComparisonResult,
   GitHubUserInsights,
+  RepositoryHighlight,
 } from "@/lib/github/types";
 import { comparisonInputSchema } from "@/lib/schemas";
 import type { MemeResult } from "@/lib/meme";
@@ -164,22 +165,26 @@ function alignWeeklyActivity(
     }));
 }
 
+type LanguageComparisonDatum = {
+  language: string;
+  color?: string | null;
+  values: Record<string, number>;
+};
+
 function buildLanguageComparison(
   userA: GitHubUserInsights,
   userB: GitHubUserInsights,
 ) {
-  const map = new Map<
-    string,
-    { language: string; [key: string]: number; color?: string | null }
-  >();
+  const map = new Map<string, LanguageComparisonDatum>();
 
   const push = (login: string, languages: GitHubUserInsights["languages"]) => {
     for (const lang of languages.slice(0, 6)) {
       const existing = map.get(lang.name) ?? {
         language: lang.name,
         color: lang.color,
+        values: {},
       };
-      existing[login] = lang.percentage;
+      existing.values[login] = lang.percentage;
       map.set(lang.name, existing);
     }
   };
@@ -188,16 +193,11 @@ function buildLanguageComparison(
   push(userB.login, userB.languages);
 
   return Array.from(map.values())
-    .map((entry) => ({
-      ...entry,
-      [userA.login]: entry[userA.login] ?? 0,
-      [userB.login]: entry[userB.login] ?? 0,
-    }))
     .sort(
       (a, b) =>
-        b[userA.login] +
-        b[userB.login] -
-        (a[userA.login] + a[userB.login]),
+        (b.values[userA.login] ?? 0) +
+        (b.values[userB.login] ?? 0) -
+        ((a.values[userA.login] ?? 0) + (a.values[userB.login] ?? 0)),
     )
     .slice(0, 6);
 }
@@ -750,7 +750,7 @@ function ComparisonResultPanel({
                   <RechartsTooltip />
                   <Pie
                     data={languages}
-                    dataKey={userA.login}
+                    dataKey={`values.${userA.login}`}
                     nameKey="language"
                     innerRadius={20}
                     outerRadius={80}
@@ -786,20 +786,24 @@ function ComparisonResultPanel({
                   <div className="flex items-center gap-4">
                     <Tooltip>
                       <TooltipTrigger className="text-xs text-muted-foreground">
-                        {userA.login}: {formatNumber(lang[userA.login] ?? 0)}%
+                        {userA.login}:{" "}
+                        {formatNumber(lang.values[userA.login] ?? 0)}%
                       </TooltipTrigger>
                       <TooltipContent>
-                        {userA.login} has {formatNumber(lang[userA.login] ?? 0)}% of
-                        code in {lang.language}.
+                        {userA.login} has{" "}
+                        {formatNumber(lang.values[userA.login] ?? 0)}% of code in{" "}
+                        {lang.language}.
                       </TooltipContent>
                     </Tooltip>
                     <Tooltip>
                       <TooltipTrigger className="text-xs text-muted-foreground">
-                        {userB.login}: {formatNumber(lang[userB.login] ?? 0)}%
+                        {userB.login}:{" "}
+                        {formatNumber(lang.values[userB.login] ?? 0)}%
                       </TooltipTrigger>
                       <TooltipContent>
-                        {userB.login} has {formatNumber(lang[userB.login] ?? 0)}% of
-                        code in {lang.language}.
+                        {userB.login} has{" "}
+                        {formatNumber(lang.values[userB.login] ?? 0)}% of code in{" "}
+                        {lang.language}.
                       </TooltipContent>
                     </Tooltip>
                   </div>
@@ -924,10 +928,10 @@ function RepoHighlights({ user, createdAtReadable }: RepoHighlightsProps) {
     user.highlights.mostForked,
     user.highlights.newestRepo,
     user.highlights.oldestRepo,
-  ].filter(Boolean) as typeof user.highlights.mostStarred[];
+  ].filter((repo): repo is RepositoryHighlight => Boolean(repo));
 
-  const showcase = Array.from(
-    new Map(
+  const showcase: RepositoryHighlight[] = Array.from(
+    new Map<string, RepositoryHighlight>(
       showcaseCandidates.map((repo) => [repo.url, repo]),
     ).values(),
   );
@@ -988,7 +992,7 @@ function RepoHighlights({ user, createdAtReadable }: RepoHighlightsProps) {
 }
 
 type HighlightRowProps = {
-  repo: NonNullable<GitHubUserInsights["highlights"]["mostStarred"]>;
+  repo: RepositoryHighlight;
 };
 
 function HighlightRow({ repo }: HighlightRowProps) {

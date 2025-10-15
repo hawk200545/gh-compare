@@ -9,23 +9,31 @@ const normalizeHandle = (value: string) => {
   return trimmed.replace(/^@/, "");
 };
 
-export const comparisonInputSchema = z.object({
-  userA: z
-    .string({ required_error: "First GitHub user is required." })
-    .min(1, "First GitHub user is required.")
-    .regex(/^[A-Za-z0-9\-@._:/?=]+$/, "Provide a GitHub username or profile URL."),
-  userB: z
-    .string({ required_error: "Second GitHub user is required." })
-    .min(1, "Second GitHub user is required.")
-    .regex(/^[A-Za-z0-9\-@._:/?=]+$/, "Provide a GitHub username or profile URL."),
-  refresh: z.boolean().optional(),
-}).refine(
-  (data) =>
-    normalizeHandle(data.userA) !== normalizeHandle(data.userB),
-  {
-    message: "Pick two different users to compare.",
-    path: ["userB"],
-  },
-);
+export const comparisonInputSchema = z
+  .object({
+    userA: z
+      .string()
+      .min(1, "First GitHub user is required.")
+      .regex(
+        /^[A-Za-z0-9\-@._:/?=]+$/,
+        "Provide a GitHub username or profile URL.",
+      ),
+    userB: z
+      .string()
+      .min(1, "Second GitHub user is required.")
+      .regex(
+        /^[A-Za-z0-9\-@._:/?=]+$/,
+        "Provide a GitHub username or profile URL.",
+      ),
+    refresh: z.boolean().optional(),
+  })
+  .refine(
+    (data) =>
+      normalizeHandle(data.userA) !== normalizeHandle(data.userB),
+    {
+      message: "Pick two different users to compare.",
+      path: ["userB"],
+    },
+  );
 
 export type ComparisonInput = z.infer<typeof comparisonInputSchema>;
